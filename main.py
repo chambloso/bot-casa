@@ -21,8 +21,7 @@ TAREAS_BASE = [
     {"nombre": "🚽 Limpiar Baño", "peso": 3},
     {"nombre": "🗑️ Sacar Basura", "peso": 1},
     {"nombre": "🧹 Barrer Áreas Comunes", "peso": 2},
-    {"nombre": "🛏️ Ordenar Pieza", "peso": 1},
-    {"nombre": "🐈 Mascotas/Arenero", "peso": 1}
+    {"nombre": "🛏️ Ordenar Pieza", "peso": 1}
 ]
 
 def enviar_whatsapp(mensaje):
@@ -87,7 +86,7 @@ def run():
     for t in asignaciones[NOMBRE_EL]:
         msg += f"🔹 {t['nombre']}\n"
         
-    msg += "\n_💪 ¡Vamos equipo!_"
+    msg += "\n_💪 ¡Vamos Michitos!_"
     return msg
 
 if __name__ == "__main__":
