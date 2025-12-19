@@ -3,16 +3,15 @@ import requests
 import os
 import pytz
 from datetime import datetime
+import sys
 
 # --- CONFIGURACIÓN ---
 PHONE_NUMBER = os.environ.get('PHONE_NUMBER') 
 API_KEY = os.environ.get('API_KEY')           
 
-# Nombres personalizados
 NOMBRE_ELLA = "Alison"
 NOMBRE_EL = "Bastián"
 
-# Lista de tareas con peso (1: Rápido, 3: Pajero/Lento)
 TAREAS_BASE = [
     {"nombre": "🍳 Cocinar Almuerzo", "peso": 3},
     {"nombre": "🥗 Cocinar Cena", "peso": 2},
@@ -26,21 +25,40 @@ TAREAS_BASE = [
 ]
 
 def enviar_whatsapp(mensaje):
-    url = f"https://api.callmebot.com/whatsapp.php?phone={PHONE_NUMBER}&text={mensaje}&apikey={API_KEY}"
+    # Usamos 'params' para que Python codifique espacios y emojis automáticamente
+    url = "https://api.callmebot.com/whatsapp.php"
+    payload = {
+        "phone": PHONE_NUMBER,
+        "text": mensaje,
+        "apikey": API_KEY
+    }
+    
+    print(f"📡 Enviando a: {PHONE_NUMBER}...")
+    
     try:
-        requests.get(url, timeout=10)
-        print("✅ Enviado.")
+        resp = requests.get(url, params=payload, timeout=20)
+        
+        # Verificamos si la API nos dio el dedo arriba o error
+        if resp.status_code == 200 and "Message queued" in resp.text:
+            print("✅ ¡ÉXITO! Mensaje entregado al bot.")
+            print(f"Respuesta del servidor: {resp.text}")
+        else:
+            print(f"⚠️ ALERTA: El código corrió pero el bot respondió error.")
+            print(f"Status Code: {resp.status_code}")
+            print(f"Respuesta completa: {resp.text}")
+            # Forzamos error para que GitHub se ponga rojo
+            sys.exit(1)
+            
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error crítico de conexión: {e}")
+        sys.exit(1)
 
 def run():
     random.shuffle(TAREAS_BASE)
     asignaciones = {NOMBRE_ELLA: [], NOMBRE_EL: []}
     peso_ella, peso_el = 0, 0
     
-    # Algoritmo de reparto equitativo
     for tarea in TAREAS_BASE:
-        # Asignamos al que tenga menos carga acumulada
         if peso_el <= peso_ella:
             asignaciones[NOMBRE_EL].append(tarea)
             peso_el += tarea['peso']
@@ -48,32 +66,28 @@ def run():
             asignaciones[NOMBRE_ELLA].append(tarea)
             peso_ella += tarea['peso']
 
-    # Fecha Chile
     tz_chile = pytz.timezone('Chile/Continental')
     fecha = datetime.now(tz_chile).strftime("%d/%m")
     
-    # --- CONSTRUCCIÓN DEL MENSAJE ---
-    # Usamos %0A para saltos de línea en la URL
+    # Construimos el mensaje normal (sin codigos raros como %0A, Python lo hará solo)
+    msg = f"✨ *PLAN DE EQUIPO - {fecha}* ✨\n" 
+    msg += f"Hola chicos, aquí está la organización justa de hoy:\n\n"
     
-    msg = f"✨ *PLAN DE EQUIPO - {fecha}* ✨%0A" 
-    msg += f"Hola chicos, aquí está la organización justa de hoy:%0A%0A"
-    
-    # Sección Alison
-    msg += f"*👸 {NOMBRE_ELLA} ({peso_ella} pts):*%0A"
+    msg += f"*👸 {NOMBRE_ELLA} ({peso_ella} pts):*\n"
     for t in asignaciones[NOMBRE_ELLA]:
-        msg += f"🔸 {t['nombre']}%0A"
+        msg += f"🔸 {t['nombre']}\n"
         
-    # Sección Bastián
-    msg += f"%0A*🤴 {NOMBRE_EL} ({peso_el} pts):*%0A"
+    msg += f"\n*🤴 {NOMBRE_EL} ({peso_el} pts):*\n"
     for t in asignaciones[NOMBRE_EL]:
-        msg += f"🔹 {t['nombre']}%0A"
+        msg += f"🔹 {t['nombre']}\n"
         
-    msg += "%0A_💪 ¡Vamos equipo! Organizados todo sale mejor._"
-    
+    msg += "\n_💪 ¡Vamos equipo!_"
     return msg
 
 if __name__ == "__main__":
     if not PHONE_NUMBER or not API_KEY:
-        print("❌ Faltan credenciales.")
-    else:
-        enviar_whatsapp(run())
+        print("❌ Faltan credenciales (Secrets).")
+        sys.exit(1)
+        
+    texto = run()
+    enviar_whatsapp(texto)
