@@ -4,60 +4,57 @@ import os
 import pytz
 from datetime import datetime
 import sys
+import time
 
 # --- CONFIGURACIÓN ---
-# Obtenemos las variables y limpiamos espacios por si acaso
-PHONE_NUMBER = os.environ.get('PHONE_NUMBER', '').strip()
 API_KEY = os.environ.get('API_KEY', '').strip()
+
+# Obtenemos los dos números. Si alguno no existe, lo ignora.
+NUMEROS = []
+if os.environ.get('PHONE_NUMBER'): 
+    NUMEROS.append(os.environ.get('PHONE_NUMBER').strip()) # Tu número
+if os.environ.get('PHONE_NUMBER_ELLA'):
+    NUMEROS.append(os.environ.get('PHONE_NUMBER_ELLA').strip()) # Su número
 
 NOMBRE_ELLA = "Alison"
 NOMBRE_EL = "Bastián"
 
 TAREAS_BASE = [
     {"nombre": "🍳 Cocinar Almuerzo", "peso": 3},
-    {"nombre": "🥗 Cocinar Cena", "peso": 2},
+    {"nombre": "🥗 Hacer la Oncesita", "peso": 2},
     {"nombre": "🍽️ Lavar Loza (Día)", "peso": 2},
     {"nombre": "🌙 Lavar Loza (Noche)", "peso": 2},
     {"nombre": "🚽 Limpiar Baño", "peso": 3},
     {"nombre": "🗑️ Sacar Basura", "peso": 1},
-    {"nombre": "🧹 Barrer Áreas Comunes", "peso": 2},
+    {"nombre": "🧹 Barrer", "peso": 2},
     {"nombre": "🛏️ Ordenar Pieza", "peso": 1}
 ]
 
-def enviar_whatsapp(mensaje):
-    # --- CAMBIO IMPORTANTE: USAMOS LA API DE TEXTMEBOT ---
+def enviar_whatsapp(mensaje, destinatario):
     url = "https://api.textmebot.com/send.php"
     
-    # Aseguramos que el número tenga el formato internacional (+569...)
-    # Si guardaste '569...' en el secreto, le agregamos el '+' al principio.
-    numero_final = PHONE_NUMBER
+    # Formato internacional
+    numero_final = destinatario
     if not numero_final.startswith("+"):
         numero_final = "+" + numero_final
         
     payload = {
-        "recipient": numero_final,  # TextMeBot usa 'recipient', no 'phone'
+        "recipient": numero_final,
         "text": mensaje,
         "apikey": API_KEY
     }
     
-    print(f"📡 Enviando a TextMeBot ({numero_final})...")
+    print(f"📡 Enviando a {numero_final}...")
     
     try:
-        # TextMeBot suele responder texto plano, no siempre JSON
         resp = requests.get(url, params=payload, timeout=20)
-        
-        # Verificamos si salió bien (TextMeBot suele decir "OK" o devolver 200)
         if resp.status_code == 200:
-            print("✅ ¡MENSAJE ENVIADO! (Status 200)")
-            print(f"Respuesta del servidor: {resp.text}")
+            print("✅ ¡ENVIADO!")
         else:
-            print(f"⚠️ ERROR: El servidor respondió {resp.status_code}")
-            print(f"Detalle: {resp.text}")
-            sys.exit(1)
+            print(f"⚠️ Error enviando a este número: {resp.text}")
             
     except Exception as e:
         print(f"❌ Error de conexión: {e}")
-        sys.exit(1)
 
 def run():
     random.shuffle(TAREAS_BASE)
@@ -76,7 +73,7 @@ def run():
     fecha = datetime.now(tz_chile).strftime("%d/%m")
     
     msg = f"✨ *PLAN DE EQUIPO - {fecha}* ✨\n" 
-    msg += f"Hola chicos, aquí está la organización justa de hoy:\n\n"
+    msg += f"Hola equipo, la IA organizó la casa hoy para que nadie pelee:\n\n"
     
     msg += f"*👸 {NOMBRE_ELLA} ({peso_ella} pts):*\n"
     for t in asignaciones[NOMBRE_ELLA]:
@@ -86,13 +83,21 @@ def run():
     for t in asignaciones[NOMBRE_EL]:
         msg += f"🔹 {t['nombre']}\n"
         
-    msg += "\n_💪 ¡Vamos Michitos!_"
+    msg += "\n_🤖 Atte. El Bot de la MichiCasa_"
     return msg
 
 if __name__ == "__main__":
-    if not PHONE_NUMBER or not API_KEY:
+    if not API_KEY:
         print("❌ Faltan credenciales (Secrets).")
         sys.exit(1)
     
-    texto = run()
-    enviar_whatsapp(texto)
+    if not NUMEROS:
+        print("❌ No hay números configurados.")
+        sys.exit(1)
+
+    texto_final = run()
+    
+    # Enviar a todos los números de la lista
+    for num in NUMEROS:
+        enviar_whatsapp(texto_final, num)
+        time.sleep(2) # Espera 2 segundos entre mensajes para no saturar
