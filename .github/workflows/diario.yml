@@ -1,0 +1,19 @@
+name: Bot Casa
+on:
+  schedule:
+    - cron: '0 12 * * *' # 12:00 UTC = 09:00 AM Chile
+  workflow_dispatch:
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - run: pip install -r requirements.txt
+      - name: Correr Script
+        env:
+          PHONE_NUMBER: ${{ secrets.PHONE_NUMBER }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: python main.py
