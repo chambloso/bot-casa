@@ -1,19 +1,32 @@
-name: Bot Casa
+name: Bot de Tareas MichiCasa
+
 on:
   schedule:
-    - cron: '0 12 * * *' # 12:00 UTC = 09:00 AM Chile
-  workflow_dispatch:
+    # Esto corre a las 11:00 UTC (Son las 08:00 AM en Chile aprox)
+    # Puedes ajustar la hora aquí.
+    - cron: '0 11 * * *'
+  workflow_dispatch: # Esto permite que lo ejecutes manualmente con un botón para probar
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - name: Checkout del código
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - run: pip install -r requirements.txt
-      - name: Correr Script
+
+      - name: Instalar librerías
+        run: |
+          pip install -r requirements.txt
+
+      - name: Ejecutar el Bot
         env:
-          PHONE_NUMBER: ${{ secrets.PHONE_NUMBER }}
+          # Aquí conectamos los secretos de GitHub con tu código
           API_KEY: ${{ secrets.API_KEY }}
+          PHONE_NUMBER: ${{ secrets.PHONE_NUMBER }}
+          PHONE_NUMBER_ELLA: ${{ secrets.PHONE_NUMBER_ELLA }}
         run: python main.py
